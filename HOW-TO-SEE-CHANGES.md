@@ -1,10 +1,7 @@
 # Why you still see the old site
 
-Edits in Cursor **do not** update this link automatically:
-
-**https://ai.studio/apps/b537842c-fcdf-4a71-afca-5d5a275cf458**
-
-That is a **Google AI Studio** copy of the app (old UI). You must run the project **on your PC**.
+You must run the project **locally** on your PC or phone (same Wi‑Fi).  
+Do not use an old bookmark or cached preview — use **http://localhost:3000** from `npm run dev`.
 
 ---
 
@@ -46,7 +43,7 @@ That is a **Google AI Studio** copy of the app (old UI). You must run the projec
 
 You **must** see all of these:
 
-| Check | New app | Old app (AI Studio) |
+| Check | New app | Old cached build |
 |-------|---------|---------------------|
 | Green bar at bottom | `LOCAL DEV · build send-picker-v8` | Missing or red “WRONG URL” |
 | Header badge | `send-picker-v8` | Not there |
@@ -68,7 +65,7 @@ Do not use Cursor’s preview panel only — use a normal browser window.
 
 ## Do not use for testing
 
-- AI Studio preview link (old build)
+- Old cached tabs or bookmarks
 - Old bookmarks
 - Cached tab without hard refresh
 
