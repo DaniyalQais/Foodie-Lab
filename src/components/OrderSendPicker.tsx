@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
 import { MessageCircle, Mail, X } from 'lucide-react';
 import { FOODIE_LAB_BUSINESS } from '../data/business';
-import type { OrderSendMethod } from '../lib/orderSend';
+import type { OrderSendMethod } from '../orderSend';
 
 interface OrderSendPickerProps {
   open: boolean;
@@ -37,8 +37,7 @@ export default function OrderSendPicker({ open, onClose, onChoose }: OrderSendPi
           </button>
         </div>
         <p className="px-4 pt-3 text-sm text-gray-600">
-          Your order is saved on this device first. Then pick how Foodie Lab should receive it —
-          <strong> WhatsApp does not open until you tap the WhatsApp button on the next screen.</strong>
+          Your order is saved on this device first. Pick how Foodie Lab should receive it.
         </p>
         <div className="p-4 grid grid-cols-1 gap-3">
           <button

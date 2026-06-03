@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { CateringOrder, OrderStatus } from '../types';
 import { CATERING_PACKAGES } from '../data';
-import { buildWhatsAppOrderMessage, getWhatsAppSendUrl } from '../lib/whatsapp';
+import { buildWhatsAppOrderMessage, getWhatsAppSendUrl } from '../whatsapp';
 
 interface AdminDashboardProps {
   orders: CateringOrder[];

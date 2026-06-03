@@ -37,7 +37,7 @@ import {
   buildItemCountsFromEstimatorAddOns,
   resolveMainPackageId,
 } from '../lib/quoteHandoff';
-import type { OrderSendMethod } from '../lib/orderSend';
+import type { OrderSendMethod } from '../orderSend';
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');

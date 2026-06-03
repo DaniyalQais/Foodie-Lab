@@ -14,11 +14,87 @@ import { CateringOrder } from '../types';
 import { CATERING_PACKAGES } from '../data';
 import { FOODIE_LAB_BUSINESS } from '../data/business';
 import EstimatedInvestmentIndicator from './EstimatedInvestmentIndicator';
-import { buildWhatsAppOrderMessage, getWhatsAppSendUrl } from '../lib/whatsapp';
-import { hasWeb3FormsConfigured, openOwnerWhatsApp, sendOwnerEmail } from '../lib/notifyOwner';
-import type { OrderSendMethod } from '../lib/orderSend';
+import { buildWhatsAppOrderMessage, getWhatsAppSendUrl } from '../whatsapp';
+import type { OrderSendMethod } from '../orderSend';
 import { animateSuccessPop } from '../lib/animeMicro';
 import AnimatedButton from './motion/AnimatedButton';
+
+function getWeb3FormsAccessKey(): string {
+  const raw = import.meta.env.VITE_WEB3FORMS_ACCESS_KEY as string | undefined;
+  if (!raw) return '';
+  return raw.trim().replace(/^["']|["']$/g, '');
+}
+
+function hasWeb3FormsConfigured(): boolean {
+  return Boolean(getWeb3FormsAccessKey());
+}
+
+async function sendOwnerEmail(order: CateringOrder) {
+  const accessKey = getWeb3FormsAccessKey();
+  const body = buildWhatsAppOrderMessage(order);
+  if (accessKey) {
+    try {
+      const fd = new FormData();
+      fd.append('access_key', accessKey);
+      fd.append('subject', `New catering request ${order.id} — ${order.fullName}`);
+      fd.append('from_name', 'Foodie Lab Website');
+      fd.append('name', order.fullName);
+      fd.append('email', order.email);
+      fd.append('phone', order.phone);
+      fd.append('message', body);
+      const res = await fetch('https://api.web3forms.com/submit', { method: 'POST', body: fd });
+      const data = (await res.json()) as { success?: boolean };
+      if (data.success) {
+        return { ok: true as const, message: `Email sent to ${FOODIE_LAB_BUSINESS.email}. Check inbox and spam.` };
+      }
+    } catch {
+      /* fallback */
+    }
+  }
+  try {
+    const fd = new FormData();
+    fd.append('name', order.fullName);
+    fd.append('email', order.email);
+    fd.append('phone', order.phone);
+    fd.append('message', body);
+    fd.append('_subject', `New catering request ${order.id} — ${order.fullName}`);
+    fd.append('_template', 'table');
+    fd.append('_captcha', 'false');
+    const url = `https://formsubmit.co/ajax/${encodeURIComponent(FOODIE_LAB_BUSINESS.email)}`;
+    const res = await fetch(url, { method: 'POST', body: fd, headers: { Accept: 'application/json' } });
+    const data = (await res.json()) as { success?: string | boolean };
+    if (data.success === 'true' || data.success === true) {
+      return { ok: true as const, message: `Email sent to ${FOODIE_LAB_BUSINESS.email}. Check spam.` };
+    }
+    return { ok: false as const, message: 'Email failed. Try WhatsApp.' };
+  } catch {
+    return {
+      ok: false as const,
+      message: accessKey ? 'Network error. Try WhatsApp.' : 'Add VITE_WEB3FORMS_ACCESS_KEY to .env and restart dev.',
+    };
+  }
+}
+
+function openOwnerWhatsApp(order: CateringOrder): boolean {
+  const url = getWhatsAppSendUrl(buildWhatsAppOrderMessage(order));
+  try {
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    return true;
+  } catch {
+    try {
+      window.location.assign(url);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
 
 interface SuccessMessageProps {
   order: CateringOrder;
@@ -51,27 +127,32 @@ export default function SuccessMessage({ order, initialSendMethod = null, onClos
   };
 
   useEffect(() => {
-    if (initialSendMethod === 'whatsapp') {
-      setChoice('whatsapp');
-      setWhatsappHint('Tap the green WhatsApp card below to open your order (we do not open it automatically).');
-    }
-    if (initialSendMethod === 'email') {
-      setChoice('email');
-      setEmailState('sent');
-      setEmailDetail(`Order sent to ${FOODIE_LAB_BUSINESS.email}. Check inbox and spam.`);
-    }
+    if (initialSendMethod !== 'email') return;
+
+    let cancelled = false;
+    setChoice('email');
+    setEmailState('sending');
+    setEmailDetail('Sending to Foodie Lab…');
+
+    void sendOwnerEmail(order).then(result => {
+      if (cancelled) return;
+      setEmailState(result.ok ? 'sent' : 'error');
+      setEmailDetail(result.message);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialSendMethod, order]);
+
+  useEffect(() => {
+    if (initialSendMethod !== 'whatsapp') return;
+    setChoice('whatsapp');
+    setWhatsappHint('WhatsApp should have opened when you chose it. Tap Send there, or use the button below.');
   }, [initialSendMethod]);
 
   const handleEmail = async () => {
     setChoice('email');
-    if (!web3FormsEnabled) {
-      setEmailState('error');
-      setEmailDetail(
-        'Email key missing. Add VITE_WEB3FORMS_ACCESS_KEY to .env, save, then run npm run dev again.'
-      );
-      return;
-    }
-
     setEmailState('sending');
     setEmailDetail(null);
     try {
@@ -120,14 +201,25 @@ export default function SuccessMessage({ order, initialSendMethod = null, onClos
             {initialSendMethod === 'whatsapp'
               ? 'WhatsApp ready'
               : initialSendMethod === 'email'
-                ? 'Email sent'
+                ? emailState === 'sending'
+                  ? 'Sending email…'
+                  : emailState === 'sent'
+                    ? 'Email sent'
+                    : emailState === 'error'
+                      ? 'Email issue'
+                      : 'Order saved'
                 : 'Order saved'}
           </h2>
           <p className="text-xs text-gray-400 font-mono">Reference: {order.id}</p>
-          {initialSendMethod && (
+          {initialSendMethod === 'whatsapp' && (
             <p className="text-sm text-emerald-800 font-medium">
-              Sent via <strong>{initialSendMethod === 'whatsapp' ? 'WhatsApp' : 'email'}</strong>. Use
-              the buttons below to send again if needed.
+              WhatsApp should have opened — tap <strong>Send</strong> in the app. Use the button below
+              to open again.
+            </p>
+          )}
+          {initialSendMethod === 'email' && emailState === 'sent' && (
+            <p className="text-sm text-emerald-800 font-medium">
+              Email sent to Foodie Lab. Use the button below to resend if needed.
             </p>
           )}
         </div>

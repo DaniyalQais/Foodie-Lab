@@ -1,6 +1,6 @@
-import type { CateringOrder } from '../types';
-import { CATERING_PACKAGES } from '../data';
-import { FOODIE_LAB_BUSINESS } from '../data/business';
+import type { CateringOrder } from './types';
+import { CATERING_PACKAGES } from './data';
+import { FOODIE_LAB_BUSINESS } from './data/business';
 
 function safe(v?: string) {
   return (v ?? '').trim();
@@ -35,8 +35,6 @@ export function buildWhatsAppOrderMessage(order: CateringOrder) {
 }
 
 export function getWhatsAppSendUrl(message: string) {
-  // wa.me requires country code with no plus, no spaces.
   const phone = FOODIE_LAB_BUSINESS.whatsappTel;
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
-

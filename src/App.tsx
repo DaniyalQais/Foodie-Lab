@@ -18,11 +18,8 @@ import BrandLogo from './components/BrandLogo';
 import MenuPresentation from './components/MenuPresentation';
 import StickyCallButton from './components/StickyCallButton';
 import type { QuoteContinueInput, QuoteHandoffPayload } from './lib/quoteHandoff';
-import type { OrderSendMethod } from './lib/orderSend';
-import { sendOwnerEmail } from './lib/notifyOwner';
-
-import { APP_BUILD_ID } from './buildVersion';
-export { APP_BUILD_ID };
+import type { OrderSendMethod } from './orderSend';
+import { buildWhatsAppOrderMessage, getWhatsAppSendUrl } from './whatsapp';
 
 export default function App() {
   const [orders, setOrders] = useState<CateringOrder[]>([]);
@@ -73,7 +70,7 @@ export default function App() {
   };
 
   // Customer creates a new inquiry
-  const handleCreateOrder = async (
+  const handleCreateOrder = (
     newInquiry: Omit<CateringOrder, 'id' | 'createdAt' | 'status'>,
     sendMethod: OrderSendMethod
   ) => {
@@ -85,17 +82,27 @@ export default function App() {
       status: 'new',
     };
 
+    if (sendMethod === 'whatsapp') {
+      const url = getWhatsAppSendUrl(buildWhatsAppOrderMessage(fullOrderObj));
+      try {
+        const link = document.createElement('a');
+        link.href = url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch {
+        window.location.assign(url);
+      }
+    }
+
     const updated = [fullOrderObj, ...orders];
     saveOrders(updated);
     setLatestOrder(fullOrderObj);
     setOrderSendMethod(sendMethod);
-
-    // Email sends here. WhatsApp never auto-opens — user taps the button on the success screen.
-    if (sendMethod === 'email') {
-      await sendOwnerEmail(fullOrderObj);
-    }
-
     setView('success');
+
     requestAnimationFrame(() => {
       document.getElementById('order-success')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
@@ -134,9 +141,6 @@ export default function App() {
               <div className="flex items-center gap-1.5">
                 <span className="font-display font-bold text-sm sm:text-base md:text-lg tracking-tight text-gray-900 truncate">Foodie Lab Catering</span>
                 <span className="text-[8px] sm:text-[9px] font-bold text-terracotta-600 bg-terracotta-50 border border-terracotta-100 px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 hidden sm:inline">Premium</span>
-                <span className="text-[7px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded shrink-0" title="App version">
-                  {APP_BUILD_ID}
-                </span>
               </div>
               <p className="text-[10px] text-gray-400 font-medium hidden md:block">Menus, boards, and buffet setups for every occasion</p>
             </div>
