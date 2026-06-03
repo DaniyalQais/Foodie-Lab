@@ -58,7 +58,7 @@ export default function EstimatedInvestmentIndicator({
                 >
                   ${range.low.toLocaleString()} – ${range.high.toLocaleString()}
                 </p>
-                {perGuest != null && !compact && (
+                {perGuest != null && guestCount != null && (
                   <p className="text-[11px] text-gray-500 mt-0.5">
                     ~${perGuest.toFixed(0)}/guest · {guestCount} guests
                   </p>

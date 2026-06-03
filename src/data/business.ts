@@ -1,9 +1,9 @@
 export const FOODIE_LAB_BUSINESS = {
   name: 'Foodie Lab Catering',
   // Display format
-  whatsapp: '+92 342 483 4128',
-  // `wa.me` requires country code, no "+" and no leading zero
-  whatsappTel: '923424834128',
+  whatsapp: '+1 520-289-6128',
+  // `wa.me` / `tel:` — country code, no "+" and no dashes
+  whatsappTel: '15202896128',
   email: 'daniyalqais6@gmail.com',
   addressLine: 'W Vuelta Friso, 85629',
   addressFull: 'W Vuelta Friso, AZ 85629',

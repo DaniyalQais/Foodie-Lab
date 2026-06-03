@@ -21,14 +21,12 @@ import {
   getPackageChoices,
 } from '../data/menuPresentation';
 import { FOODIE_LAB_BUSINESS, SERVICE_AREA_LABEL } from '../data/business';
-import EstimatedInvestmentIndicator from './EstimatedInvestmentIndicator';
 import AnimatedField from './motion/AnimatedField';
 import AnimatedButton from './motion/AnimatedButton';
+import GuestCountHero from './GuestCountHero';
+import QuoteSummary from './QuoteSummary';
 import {
-  BASE_RATE_PER_GUEST,
   calculateMenuOrderPricing,
-  DELIVERY_PLANNING_FEE,
-  INVESTMENT_RANGE_PADDING,
   calculateInvestmentRangeFromMidpoint,
 } from '../lib/orderPricing';
 import type { QuoteHandoffPayload } from '../lib/quoteHandoff';
@@ -49,7 +47,7 @@ interface MenuPresentationProps {
     sendMethod: OrderSendMethod
   ) => void;
   onCancel?: () => void;
-  /** Filled when user continues from Instant Quote — prefills & opens step 2 */
+  /** Set when user clicks Continue on Instant Quote */
   quoteHandoff?: QuoteHandoffPayload | null;
 }
 
@@ -86,7 +84,6 @@ export default function MenuPresentation({ onSubmit, onCancel, quoteHandoff }: M
   const [allergyInfo, setAllergyInfo] = useState('');
   const [specialNotes, setSpecialNotes] = useState('');
   const [quoteAppliedBanner, setQuoteAppliedBanner] = useState(false);
-  /** Keeps instant-quote midpoint until user edits guests/sides in menu builder */
   const [handoffMidpoint, setHandoffMidpoint] = useState<number | null>(null);
 
   const activePackage = MAIN_PACKAGES.find(p => p.id === activePackageId) ?? MAIN_PACKAGES[0];
@@ -98,7 +95,6 @@ export default function MenuPresentation({ onSubmit, onCancel, quoteHandoff }: M
     [activePackageId]
   );
 
-  // Apply instant-quote selections → booking step 2 (contact & delivery)
   useEffect(() => {
     if (!quoteHandoff?.id) return;
     const mainId = resolveMainPackageId(
@@ -127,7 +123,6 @@ export default function MenuPresentation({ onSubmit, onCancel, quoteHandoff }: M
     });
   }, [quoteHandoff]);
 
-  /** guests × $15 + Σ(qty × side price); range ±$25; delivery shown separately */
   const menuPricing = useMemo(
     () => calculateMenuOrderPricing(guestCount, itemCounts, serviceType),
     [guestCount, itemCounts, serviceType]
@@ -286,7 +281,7 @@ export default function MenuPresentation({ onSubmit, onCancel, quoteHandoff }: M
   return (
     <div ref={containerRef} className="w-full scroll-mt-20">
       {/* Step indicator */}
-      <div className="flex items-center gap-2 mb-4 px-1">
+      <div className="flex items-center gap-2 mb-3 px-1">
         <div
           className={cx(
             'h-1.5 flex-1 rounded-full transition-colors',
@@ -303,7 +298,7 @@ export default function MenuPresentation({ onSubmit, onCancel, quoteHandoff }: M
 
       {layoutStep === 1 && (
         <section className="rounded-3xl border border-brand-100 bg-white shadow-sm overflow-hidden">
-          <div className="border-b border-brand-100 bg-brand-50/40 px-3 pt-3 pb-0">
+          <div className="border-b border-brand-100 bg-brand-50/40 px-3 pt-2.5 pb-0">
             <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 px-1 mb-2">
               Step 1 · Build your order
             </p>
@@ -332,61 +327,19 @@ export default function MenuPresentation({ onSubmit, onCancel, quoteHandoff }: M
             <p className="text-[11px] text-gray-600 leading-snug px-1 pb-1">{activePackage.tagline}</p>
           </div>
 
-          <div className="p-4 space-y-5">
-            {/* Guest slider */}
-            <div className="rounded-2xl border border-gray-200 bg-gray-50/80 px-4 py-3">
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <span className="text-sm font-semibold text-gray-900">Guest count</span>
-                <span className="text-lg font-display font-extrabold text-terracotta-700">{guestCount}</span>
-              </div>
-              <input
-                type="range"
-                min={minGuests}
-                max={150}
-                value={guestCount}
-                onChange={e => {
-                  clearHandoffMidpoint();
-                  setGuestCount(Math.max(minGuests, parseInt(e.target.value, 10)));
-                }}
-                className="w-full accent-terracotta-500"
-              />
-              <p className="text-[10px] text-gray-500 mt-1">Minimum {minGuests} guests for {activePackage.label}</p>
+          <div className="p-3 sm:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+            <div className="lg:col-span-7 space-y-4">
+            <GuestCountHero
+              guestCount={guestCount}
+              minGuests={minGuests}
+              perGuestMidpoint={orderPricing.perGuestMidpoint}
+              onChange={n => {
+                clearHandoffMidpoint();
+                setGuestCount(n);
+              }}
+            />
 
-              <div className="mt-3 rounded-xl border border-brand-100 bg-white px-3 py-2.5 text-[11px] text-gray-600 space-y-1">
-                <div className="flex justify-between gap-2">
-                  <span>{guestCount} guests × ${BASE_RATE_PER_GUEST}</span>
-                  <span className="font-semibold text-gray-800">${orderPricing.foodBaseline}</span>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <span>Side items (Σ qty × price)</span>
-                  <span className="font-semibold text-gray-800">
-                    {orderPricing.sidesTotal > 0 ? `+$${orderPricing.sidesTotal}` : '$0'}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-2 pt-1 border-t border-gray-100 font-semibold text-gray-800">
-                  <span>Planning midpoint</span>
-                  <span>${orderPricing.finalMidpointTotal}</span>
-                </div>
-                <div className="flex justify-between gap-2 text-[10px] text-gray-500">
-                  <span>~ per guest (midpoint)</span>
-                  <span>${orderPricing.perGuestMidpoint}/guest</span>
-                </div>
-              </div>
-
-              <div className="mt-2 text-sm font-medium text-neutral-500">
-                Estimated range (±${INVESTMENT_RANGE_PADDING}):
-                <span className="ml-1 text-orange-600 font-bold">
-                  ${orderPricing.range.low} – ${orderPricing.range.high}
-                </span>
-              </div>
-              {serviceType === 'delivery' && (
-                <p className="text-[10px] text-gray-500">
-                  Delivery (~${DELIVERY_PLANNING_FEE} placeholder) confirmed after distance review.
-                </p>
-              )}
-            </div>
-
-            {/* Package-specific fillings / proteins */}
+            {/* Choose protein / fillings — original position (right after guests) */}
             <div className="space-y-3">
               <h3 className="font-display font-bold text-base text-gray-900">{activePackage.choiceHeading}</h3>
 
@@ -449,6 +402,38 @@ export default function MenuPresentation({ onSubmit, onCancel, quoteHandoff }: M
                       </button>
                     );
                   })}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Service type</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setServiceType('pickup')}
+                  className={cx(
+                    'py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1.5 cursor-pointer transition-all',
+                    serviceType === 'pickup'
+                      ? 'border-brand-500 bg-brand-50 text-brand-700 shadow-sm'
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                  )}
+                >
+                  <Coffee className="w-4 h-4 shrink-0" />
+                  Pickup
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setServiceType('delivery')}
+                  className={cx(
+                    'py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1.5 cursor-pointer transition-all',
+                    serviceType === 'delivery'
+                      ? 'border-brand-500 bg-brand-50 text-brand-700 shadow-sm'
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                  )}
+                >
+                  <Truck className="w-4 h-4 shrink-0" />
+                  Delivery
+                </button>
               </div>
             </div>
 
@@ -517,23 +502,39 @@ export default function MenuPresentation({ onSubmit, onCancel, quoteHandoff }: M
                 </ul>
               )}
             </div>
+            </div>
+
+            <div className="lg:col-span-5 space-y-3">
+              <QuoteSummary
+                sticky
+                guestCount={guestCount}
+                foodBaseline={orderPricing.foodBaseline}
+                sidesTotal={orderPricing.sidesTotal}
+                finalMidpointTotal={orderPricing.finalMidpointTotal}
+                range={orderPricing.range}
+                perGuestMidpoint={orderPricing.perGuestMidpoint}
+                serviceType={serviceType}
+              />
+            </div>
           </div>
 
-          {/* Sticky CTA — step 1 only */}
-          <div className="sticky bottom-0 z-10 p-4 pt-2 bg-gradient-to-t from-white via-white to-white/80 border-t border-brand-100">
+          <div className="sticky bottom-0 z-10 p-3 pt-2 bg-gradient-to-t from-white via-white to-white/90 border-t border-brand-100 lg:static lg:bg-transparent lg:border-0 lg:p-4">
             <AnimatedButton
               variant="primary"
               onClick={handleReviewManifest}
-              className="w-full py-3.5 rounded-2xl text-sm font-display uppercase tracking-wider"
+              className="w-full py-3 rounded-2xl text-sm font-display uppercase tracking-wider shadow-md shadow-terracotta-500/15"
             >
               Review Catering Manifest
             </AnimatedButton>
+            <p className="text-[10px] text-gray-400 text-center mt-1.5">
+              Next: contact &amp; delivery · or use Instant quote below
+            </p>
           </div>
         </section>
       )}
 
       {layoutStep === 2 && (
-        <section ref={step2Ref} className="space-y-4 pb-6 scroll-mt-20">
+        <section id="order-details" ref={step2Ref} className="space-y-4 pb-6 scroll-mt-20">
           <button
             type="button"
             onClick={() => {
@@ -550,16 +551,15 @@ export default function MenuPresentation({ onSubmit, onCancel, quoteHandoff }: M
 
           {quoteAppliedBanner && (
             <p className="text-xs font-medium text-brand-800 bg-brand-50 border border-brand-200 rounded-xl px-3 py-2.5">
-              Your instant quote is applied. Add contact &amp; delivery details below to submit.
+              Your instant quote is applied. Confirm details below and submit.
             </p>
           )}
 
-          {/* Kitchen Order Summary Manifest */}
           <div className="rounded-3xl border-2 border-terracotta-200 bg-gradient-to-b from-terracotta-50/80 to-white shadow-md overflow-hidden">
             <div className="bg-gradient-to-r from-terracotta-500 to-brand-600 px-4 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-white/80">Step 2</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-white/80">Almost done</p>
               <h2 className="text-lg font-display font-bold text-white leading-tight">
-                Kitchen Order Summary Manifest Overview
+                Your quote summary
               </h2>
             </div>
             <div className="p-4 space-y-3 text-sm">
@@ -597,17 +597,20 @@ export default function MenuPresentation({ onSubmit, onCancel, quoteHandoff }: M
                   </ul>
                 </div>
               )}
+              <div className="flex justify-between gap-3 py-2 border-b border-brand-100">
+                <span className="text-gray-500 shrink-0">Service</span>
+                <span className="font-semibold text-gray-900 capitalize">{serviceType}</span>
+              </div>
+              <div className="flex justify-between gap-3 py-2">
+                <span className="text-gray-500 shrink-0">Estimate</span>
+                <span className="font-bold text-terracotta-700">
+                  ${orderPricing.range.low}–${orderPricing.range.high}
+                </span>
+              </div>
             </div>
           </div>
 
-          <EstimatedInvestmentIndicator
-            midpoint={orderPricing.estimatedTotal}
-            guestCount={guestCount}
-            compact
-            className="border-brand-200"
-          />
-
-          {/* Delivery details questionnaire */}
+          {/* Contact & delivery */}
           <div className="rounded-3xl border border-brand-100 bg-white p-4 space-y-3 shadow-sm">
             <h3 className="font-display font-bold text-base text-gray-900">Delivery & contact details</h3>
 
@@ -662,35 +665,6 @@ export default function MenuPresentation({ onSubmit, onCancel, quoteHandoff }: M
                   className="w-full px-2 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:border-terracotta-500"
                 />
               </label>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setServiceType('pickup')}
-                className={cx(
-                  'py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1 cursor-pointer',
-                  serviceType === 'pickup'
-                    ? 'border-brand-500 bg-brand-50 text-brand-700'
-                    : 'border-gray-200 text-gray-600'
-                )}
-              >
-                <Coffee className="w-4 h-4 shrink-0" />
-                Pickup
-              </button>
-              <button
-                type="button"
-                onClick={() => setServiceType('delivery')}
-                className={cx(
-                  'py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1 cursor-pointer',
-                  serviceType === 'delivery'
-                    ? 'border-brand-500 bg-brand-50 text-brand-700'
-                    : 'border-gray-200 text-gray-600'
-                )}
-              >
-                <Truck className="w-4 h-4 shrink-0" />
-                Delivery
-              </button>
             </div>
 
             {serviceType === 'delivery' && (

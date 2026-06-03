@@ -29,6 +29,12 @@ function hasWeb3FormsConfigured(): boolean {
   return Boolean(getWeb3FormsAccessKey());
 }
 
+function getFormSubmitEndpoint(): string {
+  const token = (import.meta.env.VITE_FORMSUBMIT_TOKEN as string | undefined)?.trim();
+  if (token) return token;
+  return FOODIE_LAB_BUSINESS.email;
+}
+
 async function sendOwnerEmail(order: CateringOrder) {
   const accessKey = getWeb3FormsAccessKey();
   const body = buildWhatsAppOrderMessage(order);
@@ -60,7 +66,7 @@ async function sendOwnerEmail(order: CateringOrder) {
     fd.append('_subject', `New catering request ${order.id} — ${order.fullName}`);
     fd.append('_template', 'table');
     fd.append('_captcha', 'false');
-    const url = `https://formsubmit.co/ajax/${encodeURIComponent(FOODIE_LAB_BUSINESS.email)}`;
+    const url = `https://formsubmit.co/ajax/${encodeURIComponent(getFormSubmitEndpoint())}`;
     const res = await fetch(url, { method: 'POST', body: fd, headers: { Accept: 'application/json' } });
     const data = (await res.json()) as { success?: string | boolean };
     if (data.success === 'true' || data.success === true) {
