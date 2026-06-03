@@ -1,0 +1,6 @@
+{
+  "name": "Moms' Catering Co.",
+  "description": "A modern, warm, and highly collaborative catering booking request and operational dashboard run by two local moms, Clara and Sophia.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
